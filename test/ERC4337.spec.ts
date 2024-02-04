@@ -71,7 +71,10 @@ describe("ERC-4337", function () {
         .then((simulation) => simulation.result),
     );
 
-    await deployer.sendTransaction({ to: account.address, value: parseEther("1.0") });
+    await deployer.sendTransaction({
+      to: account.address,
+      value: parseEther("1.0"),
+    });
 
     return {
       client,

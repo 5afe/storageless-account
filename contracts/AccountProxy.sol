@@ -9,13 +9,19 @@ contract AccountProxy is AccountStorage {
         IAccountFactory factory = IAccountFactory(msg.sender);
         address accountData = factory.getAccountData(address(this));
         if (accountData != address(0)) {
-            (bool success, bytes memory data) = accountData.call("");
-            success;
+            assembly ("memory-safe") {
+                mstore(0, 0)
+                pop(call(gas(), accountData, 0, 0, 0, 12, 20))
 
-            (implementation, configuration) = abi.decode(
-                data,
-                (address, bytes)
-            );
+                implementation := mload(0)
+                configuration := mload(0x40)
+                let configurationLength := sub(returndatasize(), 20)
+                let configurationData := add(configuration, 32)
+                mstore(configuration, configurationLength)
+                returndatacopy(configurationData, 20, configurationLength)
+                mstore(0x40, add(configurationData, configurationLength))
+            }
+
             factory.setAccountData(address(0));
         }
 

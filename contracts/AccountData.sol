@@ -3,7 +3,7 @@ pragma solidity ^0.8.23;
 
 contract AccountData {
     constructor(address implementation, bytes memory configuration) {
-        bytes memory data = abi.encode(implementation, configuration);
+        bytes memory data = abi.encodePacked(implementation, configuration);
         bytes memory code = abi.encodePacked(
             // PUSH2
             bytes1(0x61),

@@ -1,10 +1,12 @@
 import { expect } from "chai";
 import { viem } from "hardhat";
 import {
+  concat,
   decodeAbiParameters,
   encodeAbiParameters,
   getAddress,
   parseAbiParameters,
+  slice,
 } from "viem";
 
 describe("AccountData", function () {
@@ -20,13 +22,7 @@ describe("AccountData", function () {
       throw new Error("missing data");
     }
 
-    const [implementation, configuration] = decodeAbiParameters(
-      parseAbiParameters("address implementation, bytes configuration"),
-      data,
-    );
-
-    expect(implementation).to.equal(getAddress(`0x${"ee".repeat(20)}`));
-    expect(configuration).to.deep.equal("0x01020304");
+    expect(data).to.equal(concat([`0x${"ee".repeat(20)}`, "0x01020304"]));
   });
 
   it("should deploy storage contract with configuration", async function () {
@@ -54,13 +50,10 @@ describe("AccountData", function () {
       throw new Error("missing data");
     }
 
-    const [decodedImplementation, configurationData] = decodeAbiParameters(
-      parseAbiParameters("address implementation, bytes configuration"),
-      data,
-    );
+    const decodedImplementation = getAddress(slice(data, 0, 20));
     const [decodedConfiguration] = decodeAbiParameters(
       parseAbiParameters("(uint256 threshold, address[] owners) configuration"),
-      configurationData,
+      slice(data, 20),
     );
 
     expect(decodedImplementation).to.equal(implementation);
