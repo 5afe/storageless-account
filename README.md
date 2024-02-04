@@ -1,6 +1,6 @@
 # Storageless Account
 
-This repository includes a proof-of-concept of a smart account that does not use
+This repository includes a proof of concept of a smart account that does not use
 any storage during regular operation. That is, the account itself does not read
 storage when checking signatures, potentially allowing for nested smart accounts
 to be used.
@@ -20,6 +20,9 @@ proxy creation. This means that:
 - **Unfortunately**, it requires a staked factory for deploying accounts with
   `initCode` because of ERC-4337 storage restrictions (reading the registered
   new configuration on the factory contract)
+
+Note that `SELFDESTRUCT` removes account storage, so you cannot store the new
+account data in the account's own storage.
 
 ## Is This Useful?
 

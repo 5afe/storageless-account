@@ -2,7 +2,7 @@
   "name": "storageless-account",
   "version": "0.0.1",
   "private": true,
-  "description": "Storageless upgradable smart account",
+  "description": "Proof of concept storageless upgradable smart account",
   "scripts": {
     "fmt": "prettier --plugin=prettier-plugin-solidity -w .",
     "test": "hardhat test"
