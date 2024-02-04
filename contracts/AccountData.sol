@@ -5,14 +5,16 @@ contract AccountData {
     constructor(address implementation, bytes memory configuration) {
         bytes memory data = abi.encode(implementation, configuration);
         bytes memory code = abi.encodePacked(
-            // CODESIZE
-            // PUSH1 0x08
+            // PUSH2
+            bytes1(0x61),
+            uint16(data.length),
+            // DUP1
+            // PUSH1 0x0a
             // PUSH0
             // CODECOPY
-            // CODESIZE
             // PUSH0
             // RETURN
-            bytes8(0x3860085f39385ff3),
+            bytes7(0x80600a5f395ff3),
             data
         );
 
