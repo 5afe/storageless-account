@@ -1,21 +1,25 @@
 // SPDX-License-Identifier: GPL-3.0-only
 pragma solidity ^0.8.23;
 
-import {AccountUpgradeStorage} from "./base/AccountUpgradeStorage.sol";
+import {AccountStorage} from "./base/AccountStorage.sol";
+import {IAccountFactory} from "./interfaces/IAccountFactory.sol";
 
-contract AccountProxy is AccountUpgradeStorage {
+contract AccountProxy is AccountStorage {
     constructor(address implementation, bytes memory configuration) {
-        if (_configurationData != address(0)) {
-            (bool success, bytes memory data) = _configurationData.call("");
+        IAccountFactory factory = IAccountFactory(msg.sender);
+        address accountData = factory.getAccountData(address(this));
+        if (accountData != address(0)) {
+            (bool success, bytes memory data) = accountData.call("");
             success;
 
             (implementation, configuration) = abi.decode(
                 data,
                 (address, bytes)
             );
-            _configurationData = address(0);
+            factory.setAccountData(address(0));
         }
 
+        _factory = factory;
         bytes memory code = abi.encodePacked(
             // CALLDATASIZE
             // PUSH0

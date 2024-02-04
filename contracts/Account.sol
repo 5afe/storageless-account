@@ -3,12 +3,13 @@ pragma solidity ^0.8.23;
 
 import {_packValidationData} from "@account-abstraction/contracts/core/Helpers.sol";
 
-import {AccountUpgradeStorage} from "./base/AccountUpgradeStorage.sol";
+import {AccountStorage} from "./base/AccountStorage.sol";
 import {IAccount, UserOperation} from "./interfaces/IAccount.sol";
+import {IAccountFactory} from "./interfaces/IAccountFactory.sol";
 import {AccountData} from "./AccountData.sol";
 
-contract Account is AccountUpgradeStorage, IAccount {
-    address private immutable SELF;
+contract Account is AccountStorage, IAccount {
+    address public immutable SELF;
     address public immutable ENTRY_POINT;
 
     constructor(address entryPoint) {
@@ -50,17 +51,18 @@ contract Account is AccountUpgradeStorage, IAccount {
     ) public view returns (bytes4 magicValue) {
         Configuration memory configuration = getConfiguration();
 
-        uint256 offset = 0;
         uint256 index = 0;
         uint256 remaining = configuration.threshold;
         while (remaining > 0) {
-            bytes calldata slice = signatures[offset:65];
-
             address owner;
             unchecked {
-                bytes32 r = bytes32(slice);
-                bytes32 s = bytes32(slice[32:]);
-                uint8 v = uint8(bytes1(slice[64:]));
+                if (signatures.length < 65) {
+                    return bytes4(0);
+                }
+
+                bytes32 r = bytes32(signatures);
+                bytes32 s = bytes32(signatures[32:]);
+                uint8 v = uint8(signatures[64]);
 
                 owner = ecrecover(message, v, r, s);
             }
@@ -76,10 +78,50 @@ contract Account is AccountUpgradeStorage, IAccount {
             if (index >= configuration.owners.length) {
                 return bytes4(0);
             }
-            index++;
+
+            unchecked {
+                index++;
+                remaining--;
+                signatures = signatures[65:];
+            }
         }
 
         return this.isValidSignature.selector;
+    }
+
+    function getDomainSeparator()
+        public
+        view
+        returns (bytes32 accountUserOpHash)
+    {
+        return
+            keccak256(
+                abi.encode(
+                    keccak256(
+                        "EIP712Domain(uint256 chainId,address verifyingContract)"
+                    ),
+                    block.chainid,
+                    this
+                )
+            );
+    }
+
+    function getAccountUserOpHash(
+        bytes32 userOpHash
+    ) public view returns (bytes32 accountUserOpHash) {
+        return
+            keccak256(
+                abi.encodePacked(
+                    bytes2(0x1901),
+                    getDomainSeparator(),
+                    keccak256(
+                        abi.encode(
+                            keccak256("AccountUserOp(bytes32 userOpHash)"),
+                            userOpHash
+                        )
+                    )
+                )
+            );
     }
 
     function validateUserOp(
@@ -94,8 +136,11 @@ contract Account is AccountUpgradeStorage, IAccount {
             "unsupported execution function"
         );
 
-        validationData = isValidSignature(userOpHash, userOp.signature) ==
-            this.isValidSignature.selector
+        bytes32 accountUserOpHash = getAccountUserOpHash(userOpHash);
+        validationData = isValidSignature(
+            accountUserOpHash,
+            userOp.signature
+        ) == this.isValidSignature.selector
             ? 0
             : 1;
         if (missingAccountFunds != 0) {
@@ -118,8 +163,8 @@ contract Account is AccountUpgradeStorage, IAccount {
         address implementation,
         bytes memory configuration
     ) external onlyEntryPoint {
-        _configurationData = address(
-            new AccountData(implementation, configuration)
+        _factory.setAccountData(
+            address(new AccountData(implementation, configuration))
         );
         selfdestruct(payable(address(this)));
     }
